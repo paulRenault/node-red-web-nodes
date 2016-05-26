@@ -102,6 +102,64 @@ module.exports = function(RED) {
         });
     }
 
+	function getAthlete(node, callback){
+		request.get({
+            url: 'https://www.strava.com/api/v3/athlete',
+            json: true,
+            headers: {
+                Authorization: "Bearer " + node.access_token
+            },
+        }, function(err, result, data) {
+            var athleteDetails;
+            var error;
+            if (err) {
+                return callback(null,err);
+            }
+            if(data) {
+                if (data.error) {
+                    return callback(null,data.error);
+                }
+                if(result.statusCode !== 200) {
+                    console.log(data);
+                    return callback(null,result.statusCode);
+                }
+
+                athleteDetails = data;
+            }
+
+            callback(athleteDetails, error);
+        });
+	}
+	
+	function getGear(node, gearId, callback){
+		request.get({
+            url: 'https://www.strava.com/api/v3/gear/'+gearId,
+            json: true,
+            headers: {
+                Authorization: "Bearer " + node.access_token
+            },
+        }, function(err, result, data) {
+			var gearDetails;
+            var error;
+            if (err) {
+                return callback(null,err);
+            }
+            if(data) {
+                if (data.error) {
+                    return callback(null,data.error);
+                }
+                if(result.statusCode !== 200) {
+                    console.log(data);
+                    return callback(null,result.statusCode);
+                }
+
+                gearDetails = data;
+            }
+
+            callback(gearDetails, error);
+		});
+	}
+	
     function populateMsgSync(node, msg, activityDetails) {
         msg.data = activityDetails; // msg.data contains everything Strava returns
 
@@ -203,7 +261,29 @@ module.exports = function(RED) {
                         }
                     }
                 });
-            }
+            }else if(node.request === "get-athlete") {
+				getAthlete(node,function(athleteDetails,error){
+					if(error) {
+                        node.error(error,msg);
+                    } else {
+						if (athleteDetails) {
+							msg.payload=athleteDetails;
+							node.send(msg);
+						}
+					}
+				});
+			}else if(node.request === "get-gear") {
+				getGear(node,msg.payload,function(gearDetails,error){
+					if(error) {
+                        node.error(error,msg);
+                    } else {
+						if (gearDetails) {
+							msg.payload=gearDetails;
+							node.send(msg);
+						}
+					}
+				});
+			}
         });
 
         node.on("close", function() {

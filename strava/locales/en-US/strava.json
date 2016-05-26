@@ -5,6 +5,8 @@
             "user": "User",
             "request": "Request",
             "activity": "get the most recent activity",
+			"athlete": "get the athlete informations",
+			"gear": "get the athlete's gear",
             "name": "Name",
             "create": "Create your own app at",
             "copy": "Copy the app details here",
