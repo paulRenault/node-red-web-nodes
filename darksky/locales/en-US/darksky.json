@@ -1,7 +1,7 @@
 {
-    "forecastio": {
+    "darksky": {
         "label": {
-            "forecastio": "Forecastio",
+            "darksky": "Credentials",
             "name": "Name",
             "forecast": "Forecast",
             "tomorrow": "Tomorrow",
@@ -28,7 +28,7 @@
         "error": {
             "settings-invalid-lat_lon": "Invalid lat/lon in node settings",
             "msg-invalid-lat_lon": "Invalid lat/lon in msg.location",
-            "no-credentials": "missing forecast.io credentials",
+            "no-credentials": "missing Dark Sky credentials",
             "invalid-lat_lon": "Invalid lat/lon provided",
             "invalid-time": "Invalid time provided",
             "invalid-date": "Invalid date provided",

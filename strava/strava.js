@@ -68,6 +68,32 @@ module.exports = function(RED) {
         });
     }
 
+    function getActivitiesSince(node, payload,callback) {
+        request.get({
+            url: 'https://www.strava.com/api/v3/athlete/activities',
+            json: true,
+            body:payload,
+            headers: {
+                Authorization: "Bearer " + node.access_token
+            },
+        }, function(err, result, data) {
+            var activityIDToReturn;
+            var error;
+            if (err) {
+                return callback(null,err);
+            }
+            if (data.error) {
+                return callback(null,node.error);
+            }
+
+            if(result.statusCode !== 200) {
+                console.log(data);
+                return callback(null,result.statusCode);
+            }
+            callback(data, error);
+        });
+    }
+
     /*
      * Get the details for an activity based on its Strava Activity ID.
      *
@@ -130,7 +156,7 @@ module.exports = function(RED) {
             callback(athleteDetails, error);
         });
 	}
-	
+
 	function getGear(node, gearId, callback){
 		request.get({
             url: 'https://www.strava.com/api/v3/gear/'+gearId,
@@ -159,7 +185,7 @@ module.exports = function(RED) {
             callback(gearDetails, error);
 		});
 	}
-	
+
     function populateMsgSync(node, msg, activityDetails) {
         msg.data = activityDetails; // msg.data contains everything Strava returns
 
@@ -245,6 +271,7 @@ module.exports = function(RED) {
 
         node.on("input", function(msg) {
             if(node.request === "get-most-recent-activity") {
+
                 getMostRecentActivityIDForSelf(node, function(activityID, error) {
                     if(error) {
                         node.error(error,msg);
@@ -254,13 +281,15 @@ module.exports = function(RED) {
                                 if(error) {
                                     node.error(error,msg);
                                 } else if (activityDetails) {
-                                    populateMsgSync(node, msg, activityDetails);
+                                    //populateMsgSync(node, msg, activityDetails);
+                                    msg.payload=activityDetails;
                                     node.send(msg);
                                 }
                              });
                         }
                     }
                 });
+
             }else if(node.request === "get-athlete") {
 				getAthlete(node,function(athleteDetails,error){
 					if(error) {
@@ -279,6 +308,17 @@ module.exports = function(RED) {
                     } else {
 						if (gearDetails) {
 							msg.payload=gearDetails;
+							node.send(msg);
+						}
+					}
+				});
+			}else if(node.request === "get-activities-since") {
+				getActivitiesSince(node,msg.payload,function(activities,error){
+					if(error) {
+                        node.error(error,msg);
+                    } else {
+						if (activities) {
+							msg.payload=activities;
 							node.send(msg);
 						}
 					}
@@ -327,6 +367,7 @@ module.exports = function(RED) {
                 client_id: credentials.client_id,
                 redirect_uri: credentials.redirect_uri,
                 response_type: "code",
+                scope: "view_private",
                 state: node_id + ":" + credentials.csrfToken
             }
         }));
