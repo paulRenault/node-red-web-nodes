@@ -18,18 +18,18 @@ module.exports = function(RED) {
     "use strict";
     var https = require("https");
 
-    function assignmentFunction(node, date, time, lat, lon, forecastioConfig, callback) {
-        if (forecastioConfig && forecastioConfig.credentials && forecastioConfig.credentials.client_key) {
-            node.apikey = forecastioConfig.credentials.client_key.trim();
+    function assignmentFunction(node, date, time, lat, lon, DarkSkyConfig, callback) {
+        if (DarkSkyConfig && DarkSkyConfig.credentials && DarkSkyConfig.credentials.client_key) {
+            node.apikey = DarkSkyConfig.credentials.client_key.trim();
         } else {
-            return callback(RED._("forecastio.error.no-credentials"));
+            return callback(RED._("darksky.error.no-credentials"));
         }
 
         if (90 >= lat && 180 >= lon && lat >= -90 && lon >= -180) {
             node.lat = lat;
             node.lon = lon;
         } else {
-            return callback(RED._("forecastio.error.invalid-lat_lon"));
+            return callback(RED._("darksky.error.invalid-lat_lon"));
         }
 
         if (date && time) {
@@ -41,9 +41,9 @@ module.exports = function(RED) {
             node.hours = time.substring(0,2);
             node.minutes = time.substring(3);
         } else if (node.date) {
-            return callback(RED._("forecastio.error.invalid-time"));
+            return callback(RED._("darksky.error.invalid-time"));
         } else if (node.time) {
-            return callback(RED._("forecastio.error.invalid-date"));
+            return callback(RED._("darksky.error.invalid-date"));
         }
         callback();
     }
@@ -55,19 +55,19 @@ module.exports = function(RED) {
 
         var today = new Date();
         if (today.getFullYear() - node.year > 60) {
-            node.warn(RED._("forecastio.warn.more-than-60-years"));
+            node.warn(RED._("darksky.warn.more-than-60-years"));
         } else if (today.getFullYear() - node.year < -10) {
-            node.warn(RED._("forecastio.warn.more-than-10-years"));
+            node.warn(RED._("darksky.warn.more-than-10-years"));
         }
         //wipe clear the msg properties if they exist, or create it if it doesn't
         msg.payload = {};
         msg.location = {};
         //If there is a value missing, the URL is not initialised.
         if (node.year && node.month && node.day && node.hours && node.minutes) {
-            url = ("https://api.forecast.io/forecast/" + node.apikey + "/" + node.lat + "," + node.lon + "," + node.year + "-" + node.month + "-" + node.day + "T" + node.hours + ":" + node.minutes + ":00?units=" + node.units);
+            url = ("https://api.darksky.net/forecast/" + node.apikey + "/" + node.lat + "," + node.lon + "," + node.year + "-" + node.month + "-" + node.day + "T" + node.hours + ":" + node.minutes + ":00?units=" + node.units);
             when = 0;
         } else if (node.lat && node.lon && node.apikey) {
-            url = ("https://api.forecast.io/forecast/" + node.apikey + "/" + node.lat + "," + node.lon + "?units=" + node.units);
+            url = ("https://api.darksky.net/forecast/" + node.apikey + "/" + node.lat + "," + node.lon + "?units=" + node.units);
             when = 1;
         }
         //If the URL is not initialised, there has been an error with the input data,
@@ -83,13 +83,13 @@ module.exports = function(RED) {
 
                 res.on('end', function() {
                     if (weather === "Forbidden") {
-                        return callback(RED._("forecastio.error.incorrect-apikey"));
+                        return callback(RED._("darksky.error.incorrect-apikey"));
                     } else {
                         var jsun;
                         try {
                             jsun = JSON.parse(weather);
                         } catch (err) {
-                            return callback(RED._("forecastio.error.api-response", { response: weather }));
+                            return callback(RED._("darksky.error.api-response", { response: weather }));
                         }
                         msg.data = jsun;
                         msg.payload.weather = jsun.daily.data[when].icon;
@@ -109,8 +109,8 @@ module.exports = function(RED) {
                         msg.location.lat = jsun.latitude;
                         msg.location.lon = jsun.longitude;
                         msg.time = new Date(jsun.daily.data[when].time*1000);
-                        msg.title = RED._("forecastio.message.weather-forecast");
-                        msg.description = RED._("forecastio.message.weather-info", {time: msg.time.toLocaleString(), lat: msg.location.lat, lon: msg.location.lon});
+                        msg.title = RED._("darksky.message.weather-forecast");
+                        msg.description = RED._("darksky.message.weather-info", {time: msg.time.toLocaleString(), lat: msg.location.lat, lon: msg.location.lon});
                         callback();
                     }
                 });
@@ -118,11 +118,11 @@ module.exports = function(RED) {
                 callback(e);
             });
         } else {
-            callback(RED._("forecastio.error.invalid-url"));
+            callback(RED._("darksky.error.invalid-url"));
         }
     }
 
-    function ForecastioInputNode(n) {
+    function DarkSkyInputNode(n) {
         RED.nodes.createNode(this, n);
         this.units = n.units || "us";
         var node = this;
@@ -135,7 +135,7 @@ module.exports = function(RED) {
         }, this.repeat );
 
         this.on('input', function(msg) {
-            assignmentFunction(node, n.date, n.time, n.lat, n.lon, RED.nodes.getNode(n.forecastio), function(err) {
+            assignmentFunction(node, n.date, n.time, n.lat, n.lon, RED.nodes.getNode(n.darksky), function(err) {
                 if (err) {
                     node.error(err,msg);
                 } else {
@@ -163,7 +163,7 @@ module.exports = function(RED) {
         node.emit("input",{});
     }
 
-    function ForecastioQueryNode(n) {
+    function DarkSkyQueryNode(n) {
         RED.nodes.createNode(this,n);
         this.units = n.units || "us";
         var node = this;
@@ -179,7 +179,7 @@ module.exports = function(RED) {
                     lat = n.lat;
                     lon = n.lon;
                 } else {
-                    node.error(RED._("forecastio.error.settings-invalid-lat_lon"));
+                    node.error(RED._("darksky.error.settings-invalid-lat_lon"));
                     return;
                 }
             } else if (msg.location) {
@@ -189,7 +189,7 @@ module.exports = function(RED) {
                         lat = msg.location.lat;
                         lon = msg.location.lon;
                     } else {
-                        node.error(RED._("forecastio.error.msg-invalid-lat_lon"));
+                        node.error(RED._("darksky.error.msg-invalid-lat_lon"));
                         return;
                     }
                 }
@@ -217,7 +217,7 @@ module.exports = function(RED) {
             }
             else { date = null; time = null;}
 
-            assignmentFunction(node, date, time, lat, lon, RED.nodes.getNode(n.forecastio), function(err) {
+            assignmentFunction(node, date, time, lat, lon, RED.nodes.getNode(n.darksky), function(err) {
                 if (err) {
                     node.error(err,msg);
                 } else {
@@ -233,17 +233,17 @@ module.exports = function(RED) {
         });
     }
 
-    function ForecastioCredentials(n) {
+    function DarkSkyCredentials(n) {
         RED.nodes.createNode(this,n);
         this.key_identifier = n.key_identifier;
     }
 
-    RED.nodes.registerType("forecastio-credentials",ForecastioCredentials,{
+    RED.nodes.registerType("darksky-credentials",DarkSkyCredentials,{
         credentials: {
             key_identifier: {type:"text"},
             client_key: {type:"password"}
         }
     });
-    RED.nodes.registerType("forecastio",ForecastioQueryNode);
-    RED.nodes.registerType("forecastio in",ForecastioInputNode);
+    RED.nodes.registerType("darksky",DarkSkyQueryNode);
+    RED.nodes.registerType("darksky in",DarkSkyInputNode);
 };
