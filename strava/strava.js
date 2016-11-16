@@ -367,6 +367,7 @@ module.exports = function(RED) {
                 client_id: credentials.client_id,
                 redirect_uri: credentials.redirect_uri,
                 response_type: "code",
+                scope: "view_private",
                 state: node_id + ":" + credentials.csrfToken
             }
         }));
